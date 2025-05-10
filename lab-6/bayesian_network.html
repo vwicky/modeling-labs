@@ -1,0 +1,357 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 800px;
+                 background-color: #ffffff;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#97c2fc", "font": {"color": "black"}, "id": "Sunlight_Hours", "label": "Sunlight_Hours", "shape": "dot", "size": 50, "title": "+------------------------+----------+\n| Sunlight_Hours(few)    | 0.373057 |\n+------------------------+----------+\n| Sunlight_Hours(medium) | 0.336788 |\n+------------------------+----------+\n| Sunlight_Hours(much)   | 0.290155 |\n+------------------------+----------+"}, {"color": "#97c2fc", "font": {"color": "black"}, "id": "Soil_Type_clay", "label": "Soil_Type_clay", "shape": "dot", "size": 50, "title": "+-----------------------+-----+----------------------+\n| Sunlight_Hours        | ... | Sunlight_Hours(much) |\n+-----------------------+-----+----------------------+\n| Soil_Type_clay(False) | ... | 0.6428571428571429   |\n+-----------------------+-----+----------------------+\n| Soil_Type_clay(True)  | ... | 0.35714285714285715  |\n+-----------------------+-----+----------------------+"}, {"color": "#97c2fc", "font": {"color": "black"}, "id": "Soil_Type_loam", "label": "Soil_Type_loam", "shape": "dot", "size": 50, "title": "+-----------------------+-----+----------------------+\n| Sunlight_Hours        | ... | Sunlight_Hours(much) |\n+-----------------------+-----+----------------------+\n| Soil_Type_loam(False) | ... | 0.7142857142857143   |\n+-----------------------+-----+----------------------+\n| Soil_Type_loam(True)  | ... | 0.2857142857142857   |\n+-----------------------+-----+----------------------+"}, {"color": "#97c2fc", "font": {"color": "black"}, "id": "Water_Frequency_weekly", "label": "Water_Frequency_weekly", "shape": "dot", "size": 50, "title": "+-------------------------------+-----+----------------------+\n| Soil_Type_clay                | ... | Soil_Type_clay(True) |\n+-------------------------------+-----+----------------------+\n| Sunlight_Hours                | ... | Sunlight_Hours(much) |\n+-------------------------------+-----+----------------------+\n| Water_Frequency_weekly(False) | ... | 0.5                  |\n+-------------------------------+-----+----------------------+\n| Water_Frequency_weekly(True)  | ... | 0.5                  |\n+-------------------------------+-----+----------------------+"}, {"color": "#97c2fc", "font": {"color": "black"}, "id": "Temperature", "label": "Temperature", "shape": "dot", "size": 50, "title": "+---------------------+----------+\n| Temperature(high)   | 0.316062 |\n+---------------------+----------+\n| Temperature(low)    | 0.300518 |\n+---------------------+----------+\n| Temperature(medium) | 0.38342  |\n+---------------------+----------+"}, {"color": "#97c2fc", "font": {"color": "black"}, "id": "Fertilizer_Type_chemical", "label": "Fertilizer_Type_chemical", "shape": "dot", "size": 50, "title": "+---------------------------------+-----+---------------------+\n| Temperature                     | ... | Temperature(medium) |\n+---------------------------------+-----+---------------------+\n| Fertilizer_Type_chemical(False) | ... | 0.8108108108108109  |\n+---------------------------------+-----+---------------------+\n| Fertilizer_Type_chemical(True)  | ... | 0.1891891891891892  |\n+---------------------------------+-----+---------------------+"}, {"color": "#97c2fc", "font": {"color": "black"}, "id": "Humidity", "label": "Humidity", "shape": "dot", "size": 50, "title": "+------------------+-----+------------------------+\n| Growth_Milestone | ... | Growth_Milestone(True) |\n+------------------+-----+------------------------+\n| Temperature      | ... | Temperature(medium)    |\n+------------------+-----+------------------------+\n| Humidity(high)   | ... | 0.5121951219512195     |\n+------------------+-----+------------------------+\n| Humidity(low)    | ... | 0.4878048780487805     |\n+------------------+-----+------------------------+"}, {"color": "#97c2fc", "font": {"color": "black"}, "id": "Water_Frequency_bi-weekly", "label": "Water_Frequency_bi-weekly", "shape": "dot", "size": 50, "title": "+----------------------------------+-----+----------------------+\n| Soil_Type_loam                   | ... | Soil_Type_loam(True) |\n+----------------------------------+-----+----------------------+\n| Water_Frequency_bi-weekly(False) | ... | 0.5483870967741935   |\n+----------------------------------+-----+----------------------+\n| Water_Frequency_bi-weekly(True)  | ... | 0.45161290322580644  |\n+----------------------------------+-----+----------------------+"}, {"color": "#97c2fc", "font": {"color": "black"}, "id": "Soil_Type_sandy", "label": "Soil_Type_sandy", "shape": "dot", "size": 50, "title": "+---------------------------+-----+---------------------------------+\n| Water_Frequency_bi-weekly | ... | Water_Frequency_bi-weekly(True) |\n+---------------------------+-----+---------------------------------+\n| Soil_Type_sandy(False)    | ... | 0.7666666666666667              |\n+---------------------------+-----+---------------------------------+\n| Soil_Type_sandy(True)     | ... | 0.23333333333333334             |\n+---------------------------+-----+---------------------------------+"}, {"color": "#97c2fc", "font": {"color": "black"}, "id": "Growth_Milestone", "label": "Growth_Milestone", "shape": "dot", "size": 50, "title": "+-------------------------+----------+\n| Growth_Milestone(False) | 0.502591 |\n+-------------------------+----------+\n| Growth_Milestone(True)  | 0.497409 |\n+-------------------------+----------+"}, {"color": "#97c2fc", "font": {"color": "black"}, "id": "Fertilizer_Type_none", "label": "Fertilizer_Type_none", "shape": "dot", "size": 50, "title": "+-----------------------------+-----+------------------------+\n| Growth_Milestone            | ... | Growth_Milestone(True) |\n+-----------------------------+-----+------------------------+\n| Fertilizer_Type_none(False) | ... | 0.7708333333333334     |\n+-----------------------------+-----+------------------------+\n| Fertilizer_Type_none(True)  | ... | 0.22916666666666666    |\n+-----------------------------+-----+------------------------+"}, {"color": "#97c2fc", "font": {"color": "black"}, "id": "Fertilizer_Type_organic", "label": "Fertilizer_Type_organic", "shape": "dot", "size": 50, "title": "+--------------------------------+-----+------------------------+\n| Growth_Milestone               | ... | Growth_Milestone(True) |\n+--------------------------------+-----+------------------------+\n| Fertilizer_Type_organic(False) | ... | 0.6041666666666666     |\n+--------------------------------+-----+------------------------+\n| Fertilizer_Type_organic(True)  | ... | 0.3958333333333333     |\n+--------------------------------+-----+------------------------+"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "from": "Sunlight_Hours", "to": "Soil_Type_clay"}, {"arrows": "to", "from": "Sunlight_Hours", "to": "Soil_Type_loam"}, {"arrows": "to", "from": "Sunlight_Hours", "to": "Water_Frequency_weekly"}, {"arrows": "to", "from": "Soil_Type_clay", "to": "Water_Frequency_weekly"}, {"arrows": "to", "from": "Soil_Type_loam", "to": "Water_Frequency_bi-weekly"}, {"arrows": "to", "from": "Temperature", "to": "Fertilizer_Type_chemical"}, {"arrows": "to", "from": "Temperature", "to": "Humidity"}, {"arrows": "to", "from": "Water_Frequency_bi-weekly", "to": "Soil_Type_sandy"}, {"arrows": "to", "from": "Growth_Milestone", "to": "Fertilizer_Type_none"}, {"arrows": "to", "from": "Growth_Milestone", "to": "Fertilizer_Type_organic"}, {"arrows": "to", "from": "Growth_Milestone", "to": "Humidity"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {
+    "configure": {
+        "enabled": false
+    },
+    "edges": {
+        "color": {
+            "inherit": true
+        },
+        "smooth": {
+            "enabled": true,
+            "type": "dynamic"
+        }
+    },
+    "interaction": {
+        "dragNodes": true,
+        "hideEdgesOnDrag": false,
+        "hideNodesOnDrag": false
+    },
+    "physics": {
+        "barnesHut": {
+            "avoidOverlap": 0,
+            "centralGravity": 0.3,
+            "damping": 0.09,
+            "gravitationalConstant": -80000,
+            "springConstant": 0.001,
+            "springLength": 250
+        },
+        "enabled": true,
+        "stabilization": {
+            "enabled": true,
+            "fit": true,
+            "iterations": 1000,
+            "onlyDynamicEdges": false,
+            "updateInterval": 50
+        }
+    }
+};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>
